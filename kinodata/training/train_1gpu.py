@@ -58,11 +58,19 @@ parser.add_argument("--num_workers", type=int, default=len(os.sched_getaffinity(
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--accumulate_grad_batches", type=int, default=4)
 parser.add_argument("--output_dir", type=str, default=str(Path(__file__).resolve().parents[2] / "runs"), help="root folder for prediction CSVs and checkpoints")
+# ablations (defaults = paper model)
+parser.add_argument("--activity_eps", type=float, default=0.05, help="floor of the pose weighting of the activity loss; 1.0 = unweighted")
+parser.add_argument("--pose_loss_weight", type=float, default=1.0, help="weight of the pose loss; 0 skips the pose batches")
+parser.add_argument("--no_pose", action="store_true", help="no-pose baseline: activity Gaussian NLL only (sets activity_eps=1, pose_loss_weight=0, monitors val/mae_activity)")
 # for smoke tests / timing: int = number of batches, float = fraction
 parser.add_argument("--limit_train_batches", type=float, default=1.0)
 parser.add_argument("--limit_val_batches", type=float, default=1.0)
 parser.add_argument("--limit_test_batches", type=float, default=1.0)
 args = parser.parse_args()
+if args.no_pose:
+    args.activity_eps, args.pose_loss_weight = 1.0, 0.0
+# without pose training the pose MAE is meaningless, so select models on activity MAE only
+monitor = "val/combined_mae" if args.pose_loss_weight > 0 else "val/mae_activity"
 
 def _limit(x):
     return int(x) if x > 1 else x
@@ -152,6 +160,9 @@ config["max_epochs"] = args.max_epochs
 config["accelerator"] = "gpu"
 config["csv_save_dir"]=f"{args.output_dir}/{project_name}"
 config["num_workers"] = args.num_workers
+config["activity_eps"] = args.activity_eps
+config["pose_loss_weight"] = args.pose_loss_weight
+config["monitor"] = monitor
 set_seed(config["seed"])
 
 print(f"the configuration is {config}")
@@ -164,7 +175,7 @@ checkpoint_callback = ModelCheckpoint(
     dirpath=checkpoint_dir,
     filename="best-epoch{epoch:03d}",
     auto_insert_metric_name=False,
-    monitor="val/combined_mae",
+    monitor=monitor,
     mode="min",
     save_top_k=1,
 )
@@ -208,8 +219,8 @@ def train(config, fn_data, fn_model=None):
    
     lr_monitor = LearningRateMonitor("epoch")
     early_stopping = EarlyStopping(
-        monitor="val/combined_mae", 
-        patience=config.early_stopping_patience, 
+        monitor=monitor,
+        patience=config.early_stopping_patience,
         mode="min",
     )
     

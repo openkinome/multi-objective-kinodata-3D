@@ -60,6 +60,13 @@ class RegressionModel(pl.LightningModule):
         self.current_weight_pose = initial_weight_pose
         self.current_weight_pki = initial_weight_pki
 
+        # ablation settings; defaults reproduce the paper model
+        # activity_eps: floor of the pose weighting of the activity loss (1.0 = unweighted)
+        # pose_loss_weight: 0.0 skips the pose batches entirely (no-pose baseline)
+        self.activity_eps = getattr(config, "activity_eps", 0.05)
+        self.pose_loss_weight = getattr(config, "pose_loss_weight", 1.0)
+        self.monitor = getattr(config, "monitor", "val/combined_mae")
+
               
 
          
@@ -88,7 +95,7 @@ class RegressionModel(pl.LightningModule):
         return [optim], [
             {
                 "scheduler": scheduler,
-                "monitor": "val/combined_mae",
+                "monitor": self.monitor,
                 "interval": "epoch",
                 "frequency": 1,
             }
@@ -125,7 +132,7 @@ class RegressionModel(pl.LightningModule):
 
         #gaussian torch loss
 
-        epsilon = 0.05
+        epsilon = self.activity_eps
 
         variance = torch.exp(log_uncertainty_act)
         pose_certainty=torch.sigmoid(pose_pred).detach()
@@ -207,9 +214,9 @@ class RegressionModel(pl.LightningModule):
 
             
 
-        if batch["pose"]:
+        if batch["pose"] and self.pose_loss_weight > 0:
 
-            
+
 
 
             batch_pose = batch["pose"]
@@ -238,7 +245,7 @@ class RegressionModel(pl.LightningModule):
 
         # standard weighting loss
         activity_loss = self.current_weight_pki * loss_activity_raw 
-        pose_loss = self.current_weight_pose * loss_pose_raw
+        pose_loss = self.current_weight_pose * self.pose_loss_weight * loss_pose_raw
         total_loss = activity_loss + pose_loss 
         self.log("train/loss_pose", pose_loss, batch_size=n_pose, on_epoch=True, on_step=True)
         self.log("train/loss_activity", activity_loss, batch_size=n_act, on_epoch=True, on_step=True)
