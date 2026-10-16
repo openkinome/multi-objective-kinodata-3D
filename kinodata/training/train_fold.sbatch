@@ -11,7 +11,7 @@
 # Resubmitting the same command after a time-out continues from last.ckpt and logs to the same wandb run.
 # Optional environment variables: KINODATA_ENV (conda env name or path to an unpacked conda-pack folder,
 # default kinodata_env), CONDA_BASE (default ~/miniforge3),
-# OUTPUT_DIR (default <repo>/runs), WANDB_ENTITY / WANDB_PROJECT / WANDB_MODE.
+# OUTPUT_DIR (default <repo>/runs), WANDB_ENTITY / WANDB_PROJECT / WANDB_MODE (default offline).
 #
 # The torch 1.12 / CUDA 11 environment supports GPUs up to sm_86 (A100 yes, H100/H200 no).
 
@@ -47,7 +47,10 @@ set -u
 export WANDB_ENTITY=${WANDB_ENTITY:-nextaids}
 export WANDB_PROJECT=${WANDB_PROJECT:-kinodata-3d_rmsd10}
 export WANDB_RUN_GROUP=${WANDB_RUN_GROUP:-$NAME}
-export WANDB_MODE=${WANDB_MODE:-online}
+# Lise compute nodes have no internet: log offline, then upload from a login node with
+#   wandb sync <OUTPUT_DIR>/<run_name>_fold_<fold>/wandb/offline-run-*
+export WANDB_MODE=${WANDB_MODE:-offline}
+export PYTHONUNBUFFERED=1   # so prints show up in the .out file as they happen
 
 # run inside a per-run folder so the split CSVs and wandb files of parallel jobs don't overwrite each other
 RUN_DIR=$OUTPUT_DIR/${NAME}_fold_${FOLD}
