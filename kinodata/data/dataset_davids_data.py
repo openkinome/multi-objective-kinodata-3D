@@ -315,6 +315,7 @@ class DavidsdataDocked(InMemoryDataset):
         require_kissim_residues: bool = False,
         use_multiprocessing: bool = True,
         num_processes: Optional[int] = None,
+        load: bool = True,
     ):
         self.remove_hydrogen = remove_hydrogen
         self._prefix = prefix
@@ -334,8 +335,14 @@ class DavidsdataDocked(InMemoryDataset):
         print(self.processed_paths[0])
         print(self.root)
         print(self.processed_file_names)
+        # load=False skips reading the processed file into memory, e.g. for the
+        # unfiltered source of a Filtered dataset whose cache already exists
+        if load:
+            self.load_processed()
+
+    def load_processed(self):
         self.data, self.slices = torch.load(self.processed_paths[0])
-    
+
     @property
     def pocket_sequence_file(self) -> Path:
         return Path(self.raw_dir) / "pocket_sequences.csv"
@@ -506,6 +513,8 @@ def Filtered_david(dataset: DavidsdataDocked, filter: Callable) -> Type[Davidsda
             )
 
         def make_data_list(self) -> List[HeteroData]:
+            if dataset.slices is None:
+                dataset.load_processed()
             return [data for data in dataset]  # type: ignore
 
         def filter_transform(self, data_list: List[HeteroData]) -> List[HeteroData]:

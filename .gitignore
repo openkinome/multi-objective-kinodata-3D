@@ -203,3 +203,9 @@ kinodata/scaffold_splits_check
 
 #redundant data files
 kinodata/data/data_module_*
+
+# paper manuscript, SI and reviews (local only)
+paper_and_revisions/
+
+# training outputs (prediction CSVs, checkpoints)
+runs/

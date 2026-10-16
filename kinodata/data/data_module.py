@@ -358,8 +358,9 @@ def make_kinodata_module(
     activityBaseCls = partial(KinodataDocked,   remove_hydrogen=config.remove_hydrogen)
 
     if getattr(config, "filter_rmsd_max_value", None) is not None:
-        poseCls     = Filtered_david(poseBaseCls(),     T.FilterDockingRMSD(config.filter_rmsd_max_value))
-        activityCls = Filtered(     activityBaseCls(),  T.FilterDockingRMSD(config.filter_rmsd_max_value))
+        # the unfiltered sources are only read if the filtered cache has to be built
+        poseCls     = Filtered_david(poseBaseCls(load=False),     T.FilterDockingRMSD(config.filter_rmsd_max_value))
+        activityCls = Filtered(     activityBaseCls(load=False),  T.FilterDockingRMSD(config.filter_rmsd_max_value))
     else:
         poseCls, activityCls = poseBaseCls, activityBaseCls
 
