@@ -241,7 +241,9 @@ class RegressionModel(pl.LightningModule):
 
 
         n_pose=batch["pose"].num_graphs if batch["pose"] is not None else 0
-        n_act=batch["activity"].num_graphs
+        # the activity loader can run out first when its training split is filtered (RMSD ablations):
+        # the remaining steps of the epoch then train on pose batches only
+        n_act=batch["activity"].num_graphs if batch["activity"] is not None else 0
 
         # standard weighting loss
         activity_loss = self.current_weight_pki * loss_activity_raw 

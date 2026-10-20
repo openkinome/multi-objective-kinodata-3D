@@ -63,6 +63,10 @@ parser.add_argument("--output_dir", type=str, default=str(Path(__file__).resolve
 # ablations (defaults = paper model)
 parser.add_argument("--activity_eps", type=float, default=0.10, help="floor of the pose weighting of the activity loss; 1.0 = unweighted")
 parser.add_argument("--pose_loss_weight", type=float, default=1.0, help="weight of the pose loss; 0 skips the pose batches")
+# RMSD ablations: filter the training and validation data of one dataset by RMSD (activity: predicted,
+# pose: true); the test sets and the activity normalization stay those of the unfiltered split
+parser.add_argument("--train_rmsd_max_activity", type=float, default=None, help="keep activity train/val complexes with predicted RMSD <= this (A)")
+parser.add_argument("--train_rmsd_max_pose", type=float, default=None, help="keep pose train/val samples with RMSD <= this (A)")
 parser.add_argument("--no_pose", action="store_true", help="no-pose baseline: activity Gaussian NLL only (sets activity_eps=1, pose_loss_weight=0, monitors val/mae_activity)")
 # for smoke tests / timing: int = number of batches, float = fraction
 parser.add_argument("--limit_train_batches", type=float, default=1.0)
@@ -165,6 +169,8 @@ config["num_workers"] = args.num_workers
 config["activity_eps"] = args.activity_eps
 config["pose_loss_weight"] = args.pose_loss_weight
 config["monitor"] = monitor
+config["train_rmsd_max_activity"] = args.train_rmsd_max_activity
+config["train_rmsd_max_pose"] = args.train_rmsd_max_pose
 set_seed(config["seed"])
 
 print(f"the configuration is {config}")

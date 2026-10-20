@@ -210,8 +210,12 @@ def make_data_module(
     test_kwargs: Optional[Kwargs] = None,
     one_time_transform: Optional[Callable[[InMemoryDataset], InMemoryDataset]] = None,
     normalization: bool = False,
+    normalization_idx: Optional[List[int]] = None,
     **kwargs,
 ) -> LightningDataset:
+    """normalization_idx: indices of full_dataset whose targets set the normalization mean/std
+    (default: the training split). Used when the training split is filtered but the targets must
+    stay on the scale of the unfiltered training split."""
     assert (dataset_cls is None) ^ (dataset_instance is None)
 
     def subset(full_ds: InMemoryDataset, idx: List[int]):
@@ -233,7 +237,8 @@ def make_data_module(
 
     # optional target normalization (activity)
     if normalization and train_dataset is not None:
-        y = torch.stack([d.y for d in train_dataset])
+        norm_dataset = train_dataset if normalization_idx is None else full_dataset[normalization_idx]
+        y = torch.stack([d.y for d in norm_dataset])
         mu, sigma = y.mean().item(), y.std().item()
         print(f"[normalize before y] mean={mu:.4f} std={sigma:.4f}")
 
@@ -272,6 +277,24 @@ def make_data_module(
         prefetch_factor=4,
         **kwargs,
     )
+
+def _filter_trainval_by_rmsd(ds, split: Split, max_rmsd: Optional[float], tag: str) -> Split:
+    """Keep only training/validation samples with predicted_rmsd <= max_rmsd; the test split is unchanged."""
+    if max_rmsd is None:
+        return split
+    store = ds._data if getattr(ds, "_data", None) is not None else ds.data
+    rmsd = store.predicted_rmsd.view(-1).numpy()
+    assert len(rmsd) == len(ds), f"{tag}: one predicted_rmsd per sample expected"
+
+    def keep(idx):
+        idx = np.asarray(idx, dtype=int)
+        return idx[rmsd[idx] <= max_rmsd].tolist()
+
+    filtered = Split(keep(split.train_split), keep(split.val_split), split.test_split)
+    print(f"[{tag} train/val RMSD <= {max_rmsd}] train {split.train_size} -> {filtered.train_size}, "
+          f"val {split.val_size} -> {filtered.val_size}, test {split.test_size} (unchanged)")
+    return filtered
+
 
 # ------------------------------------------
 # Joint SCAFFOLD split builder (aligned folds)
@@ -480,6 +503,13 @@ def make_kinodata_module(
 
 
 
+    # optional RMSD filter on the training and validation parts only (ablations: train on a
+    # pose-quality range, evaluate on the unchanged test set). Activity targets keep the
+    # normalization of the unfiltered training split, so test values stay comparable.
+    act_norm_idx = split_act.train_split
+    split_act = _filter_trainval_by_rmsd(activity_ds, split_act, getattr(config, "train_rmsd_max_activity", None), "activity")
+    split_pose = _filter_trainval_by_rmsd(pose_ds, split_pose, getattr(config, "train_rmsd_max_pose", None), "pose")
+
     def dump_smiles_scaffolds(ds, split, prefix):
         smiles = [d.smiles for d in ds]
         scaff  = [d.scaffold for d in ds]
@@ -516,6 +546,7 @@ def make_kinodata_module(
         test_kwargs={"transform": val_transform},
         one_time_transform=one_time_transform,
         normalization=getattr(config, "normalize_activity", True),  # default True
+        normalization_idx=act_norm_idx,
     )
 
     dm_pose = make_data_module(
