@@ -317,7 +317,7 @@ class KinodataKFoldSplit:
                 n_items=n_items,
                 pocket_sequences=dataset.data.pocket_sequence,
                 clustering=self.pocket_clustering,
-                sim_measure=self.pocket_similarity_measure(),
+                sim_measure=self.pocket_similarity_measure,
             )
             splits = group_k_fold_split(
                 group_index=pockets,
@@ -395,7 +395,7 @@ def joint_pocket_kfold_split(activity_ds,
     """
     act_groups, pose_groups = _cluster_pockets_union(
         activity_ds, pose_ds, KinodataKFoldSplit.pocket_clustering,
-        KinodataKFoldSplit.pocket_similarity_measure()
+        KinodataKFoldSplit.pocket_similarity_measure
     )
 
     # Concatenate views to drive GroupKFold on shared pocket IDs
