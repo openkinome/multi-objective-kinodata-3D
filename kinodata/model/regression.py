@@ -63,7 +63,7 @@ class RegressionModel(pl.LightningModule):
         # ablation settings; defaults reproduce the paper model
         # activity_eps: floor of the pose weighting of the activity loss (1.0 = unweighted)
         # pose_loss_weight: 0.0 skips the pose batches entirely (no-pose baseline)
-        self.activity_eps = getattr(config, "activity_eps", 0.02)
+        self.activity_eps = getattr(config, "activity_eps", 0.10)
         self.pose_loss_weight = getattr(config, "pose_loss_weight", 1.0)
         self.monitor = getattr(config, "monitor", "val/combined_mae")
 

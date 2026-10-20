@@ -50,7 +50,7 @@ parser.add_argument("--fold", type=int, required=True, help="Fold index for cros
 parser.add_argument("--csv_folder_name", type=str, required=True, help="name of csv folder for output")
 parser.add_argument("--checkpoint_name", type=str, required=True, help="name of checkpoint folder")
 parser.add_argument("--split_type", type=str, default="random-k-fold", choices=["random-k-fold", "scaffold-k-fold", "pocket-k-fold"])
-parser.add_argument("--rmsd_max", type=float, default=20, help="RMSD filter (A) applied to both datasets")
+parser.add_argument("--rmsd_max", type=float, default=10, help="RMSD filter (A) applied to both datasets (keeps <= rmsd_max)")
 parser.add_argument("--max_epochs", type=int, default=500)
 # training seed (init, data order); the folds are fixed by split_seed and do not change with it
 parser.add_argument("--seed", type=int, default=42)
@@ -61,7 +61,7 @@ parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--accumulate_grad_batches", type=int, default=4)
 parser.add_argument("--output_dir", type=str, default=str(Path(__file__).resolve().parents[2] / "runs"), help="root folder for prediction CSVs and checkpoints")
 # ablations (defaults = paper model)
-parser.add_argument("--activity_eps", type=float, default=0.02, help="floor of the pose weighting of the activity loss; 1.0 = unweighted")
+parser.add_argument("--activity_eps", type=float, default=0.10, help="floor of the pose weighting of the activity loss; 1.0 = unweighted")
 parser.add_argument("--pose_loss_weight", type=float, default=1.0, help="weight of the pose loss; 0 skips the pose batches")
 parser.add_argument("--no_pose", action="store_true", help="no-pose baseline: activity Gaussian NLL only (sets activity_eps=1, pose_loss_weight=0, monitors val/mae_activity)")
 # for smoke tests / timing: int = number of batches, float = fraction

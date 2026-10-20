@@ -11,7 +11,7 @@
 #                   add --export=ALL,KINODATA_ENV=... if needed)
 # Example (iris):
 #   mkdir -p slurm_out; export KINODATA_ENV=kinodata_backup
-#   sbatch -p gpu --gres=gpu:l40s:1 --time=3-00:00:00 train_fold.sbatch 0 scaffold-k-fold 20 rmsd20_scaffold_wl10_wh7_repro
+#   sbatch -p gpu --gres=gpu:l40s:1 --time=3-00:00:00 train_fold.sbatch 0 scaffold-k-fold 10 rmsd10_eps0.10_scaffold_wl10_wh7_repro
 #
 # Resubmitting the same command after a time-out continues from last.ckpt and logs to the same wandb run,
 # so a new run needs a new run name.

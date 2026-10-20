@@ -212,3 +212,7 @@ runs/
 
 # analysis outputs (figures, cached tables); the notebooks themselves are tracked
 analysis/output/
+
+# local notes for Claude Code and Slurm logs (not part of the release)
+CLAUDE.md
+kinodata/training/slurm_out/
