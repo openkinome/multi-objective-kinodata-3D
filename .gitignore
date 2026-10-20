@@ -209,3 +209,6 @@ paper_and_revisions/
 
 # training outputs (prediction CSVs, checkpoints)
 runs/
+
+# analysis outputs (figures, cached tables); the notebooks themselves are tracked
+analysis/output/
