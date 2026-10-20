@@ -17,7 +17,7 @@
 # so a new run needs a new run name.
 # Optional environment variables: KINODATA_ENV (conda env name or path to an unpacked conda-pack folder,
 # default kinodata_env), CONDA_BASE (default ~/miniforge3), OUTPUT_DIR (default <repo>/runs),
-# WANDB_ENTITY / WANDB_PROJECT / WANDB_MODE (default: online if the node reaches wandb, else offline).
+# WANDB_ENTITY / WANDB_PROJECT / WANDB_MODE (default offline).
 #
 # The torch 1.12 / CUDA 11 environment supports GPUs up to sm_86 (L40S, A100, A40 yes; H100/H200 no).
 
@@ -51,12 +51,11 @@ set -u
 export WANDB_ENTITY=${WANDB_ENTITY:-nextaids}
 export WANDB_PROJECT=${WANDB_PROJECT:-kinodata-3d_rmsd10}
 export WANDB_RUN_GROUP=${WANDB_RUN_GROUP:-$NAME}
-# nodes without internet (Lise) log offline; upload later from a login node with
-#   wandb sync <OUTPUT_DIR>/<run_name>_fold_<fold>/wandb/offline-run-*
-if [ -z "${WANDB_MODE:-}" ]; then
-    if timeout 10 curl -sI https://api.wandb.ai >/dev/null 2>&1; then WANDB_MODE=online; else WANDB_MODE=offline; fi
-fi
-export WANDB_MODE
+# offline by default: Lise nodes have no internet, and the wandb 0.13 of the torch-1.12 env can no
+# longer create runs on the wandb server (fails in server_settings_introspection). Upload afterwards
+# from a login node with a recent wandb client:
+#   wandb sync --entity $WANDB_ENTITY --project $WANDB_PROJECT <OUTPUT_DIR>/<run_name>_fold_<fold>/wandb/offline-run-*
+export WANDB_MODE=${WANDB_MODE:-offline}
 export PYTHONUNBUFFERED=1   # so prints show up in the .out file as they happen
 
 # run inside a per-run folder so the split CSVs and wandb files of parallel jobs don't overwrite each other
