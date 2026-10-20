@@ -388,7 +388,7 @@ def joint_pocket_kfold_split(activity_ds,
                              *,
                              val_frac: float = 0.5,
                              seed: int = 0,
-                             enforce_no_leak: bool = True) -> List[DualSplit]:
+                             enforce_no_leak: bool = True) -> Tuple[List[DualSplit], np.ndarray, np.ndarray]:
     """
     Produce synchronized K-fold splits by pocket across BOTH datasets.
     No pocket in test appears in train/val in either task.
@@ -442,4 +442,5 @@ def joint_pocket_kfold_split(activity_ds,
             _assert_no_leak(act_groups, dual.activity, f"activity fold {i}")
             _assert_no_leak(pose_groups, dual.pose,     f"pose fold {i}")
 
-    return folds
+    # the pocket group ids are returned too, for optional per-pocket capping in make_kinodata_module
+    return folds, act_groups, pose_groups
