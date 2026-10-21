@@ -53,15 +53,15 @@ We currently support installation from source.
 ### 1. Clone this repository
 
 ```
-git clone https://github.com/raquellrios/multi-objective-kinodata-3D.git
+git clone https://github.com/openkinome/multi-objective-kinodata-3D.git
 cd multi-objective-kinodata-3D
-git checkout paper_release
+git checkout v2.0.0   # release that matches the published paper
 ```
 
 ### 2. Set up Python environment
 You can use mamba or conda to set up the environment
 ```
-mamba env create -f kinodata_env.yml
+mamba env create -f kinodata_env.yaml
 mamba activate kinodata_env
 ```
 
@@ -73,3 +73,67 @@ pip install -e .
 
 ### 3. Obtain raw data
 The raw and processed data can be obtained [from Zenodo](https://doi.org/10.5281/zenodo.20433386). After downloading the archives, extract them in the root directory of this repository. See the Zenodo description for more details on the folder structure of the datasets.
+The experiments in the paper use the data filtered to an RMSD of at most 10 Å (`data/processed/*/filter_predicted_rmsd_le10.00/`). If only the raw data are present, the processed and filtered datasets are built on first use.
+
+## Reproducing the paper
+
+All experiments use 5-fold cross-validation; each fold is one training run. `kinodata/training/train_1gpu.py` trains one fold, and its defaults are the configuration of the reported models:
+
+| Setting | Value |
+|---|---|
+| RMSD filter (both datasets) | ≤ 10 Å (`--rmsd_max 10`) |
+| Pose-quality target | q = 1 / (1 + exp(0.9 (RMSD − 4.5))) |
+| Pose loss | BCE with class weights 10 (q ≤ 0.2) and 7 (q ≥ 0.8), 1 otherwise |
+| Activity loss | Gaussian NLL weighted by ε + (1 − ε) q, ε = 0.10 (`--activity_eps 0.10`) |
+| Total loss | L_activity + L_pose |
+| Batches | 32 activity + 32 pose complexes per step, gradients accumulated over 4 steps (effective batch 128 per task) |
+| Optimizer | Adam, learning rate 3e-4, weight decay 1e-3; learning rate × 0.9 after 8 epochs without improvement (min 1e-6) |
+| Model selection | early stopping (patience 24) on the validation mean of activity and pose MAE; at most 500 epochs; the best checkpoint is tested |
+| Splits | `random-k-fold`, `scaffold-k-fold` (joint Bemis–Murcko scaffold groups for both datasets, at most 3,000 poses per scaffold), `pocket-k-fold` (cold target: joint KLIFS pocket-sequence clusters); the held-out fold is split in half into validation and test (80/10/10) |
+| Seeds | training seed 42 (`--seed`), split seed 0 |
+
+### Training commands
+
+Run from `kinodata/training`; outputs go to `runs/` in the repository root (`--output_dir` to change it).
+
+```bash
+cd kinodata/training
+export WANDB_MODE=offline        # or online / disabled; WANDB_ENTITY and WANDB_PROJECT select the wandb project
+
+for SPLIT in random-k-fold scaffold-k-fold pocket-k-fold; do
+  for FOLD in 0 1 2 3 4; do
+    # pose-aware model
+    python train_1gpu.py --fold $FOLD --split_type $SPLIT \
+        --csv_folder_name pose_aware_$SPLIT --checkpoint_name checkpoints_pose_aware_$SPLIT
+    # no-pose baseline: activity Gaussian NLL only (unweighted), no pose objective, model selection on activity MAE
+    python train_1gpu.py --fold $FOLD --split_type $SPLIT --no_pose \
+        --csv_folder_name no_pose_$SPLIT --checkpoint_name checkpoints_no_pose_$SPLIT
+  done
+done
+```
+
+Each run writes to `runs/<csv_folder_name>_fold_<k>/` the split (`activity_smiles_split_<k>.csv`, `pose_smiles_split_<k>.csv`), per-sample predictions of the training and validation sets every 10 epochs and of the test set with the best checkpoint (`test_activity_epoch_<e>.csv`: `pred_activity`, `target_activity`, `variance`, `pose`, `target_pose`; `test_pose_epoch_<e>.csv`). Activities are z-scored with the training mean and standard deviation, so predictions and targets are in z-units. Checkpoints go to `runs/<checkpoint_name>_fold_<k>/`. A run that is interrupted continues from `last.ckpt` when started again with the same names.
+
+Training one fold takes about 1.5 days on an NVIDIA L40S (~25 min per epoch). The default batch size needs more than 12 GB of GPU memory. With Slurm, `kinodata/training/train_fold.sbatch` runs one fold; its header shows the usage.
+
+### Ablations
+
+| Model | Extra arguments |
+|---|---|
+| Pose task without pose-dependent weighting of the activity loss | `--activity_eps 1` |
+| Pose training data restricted to RMSD ≤ X Å (activity data unchanged) | `--train_rmsd_max_pose X` |
+| Both datasets restricted to RMSD ≤ X Å ("good poses only") | `--train_rmsd_max_pose X --train_rmsd_max_activity X` |
+
+The RMSD restrictions apply to the training and validation sets only; the test sets and the activity normalization are those of the unrestricted split, so all models are evaluated on the same test complexes.
+
+### Analysis
+
+The notebooks in `analysis/` compute the evaluations of the paper from the test predictions (set the run folder at the top of each notebook):
+
+| Notebook / script | Content |
+|---|---|
+| `ece.ipynb` | expected calibration error and calibration curves |
+| `uncertainty_ranking.ipynb` | risk–coverage, uncertainty ranking metrics, calibration and risk–coverage per predicted pose-quality class |
+| `rmsd_distribution.ipynb` | RMSD distributions, effect of the RMSD cutoff, sigmoid parameters |
+| `dataset_overlap.ipynb` | overlap of ligands, kinases and kinase–ligand pairs between the activity and pose datasets |
+| `gradient_balance.py` | gradient contributions of the activity and pose losses |
