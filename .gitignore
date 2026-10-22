@@ -210,8 +210,10 @@ paper_and_revisions/
 # training outputs (prediction CSVs, checkpoints)
 runs/
 
-# analysis outputs (figures, cached tables); the notebooks themselves are tracked
-analysis/output/
+# working notebooks, scripts and outputs of the paper revision (local only, decided 2026-10-22);
+# the notebooks for the public repository live in analysis_publication/
+analysis/
+analysis_publication/output/
 
 # local notes for Claude Code and Slurm logs (not part of the release)
 CLAUDE.md

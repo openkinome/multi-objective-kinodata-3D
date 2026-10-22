@@ -128,12 +128,4 @@ The RMSD restrictions apply to the training and validation sets only; the test s
 
 ### Analysis
 
-The notebooks in `analysis/` compute the evaluations of the paper from the test predictions (set the run folder at the top of each notebook):
-
-| Notebook / script | Content |
-|---|---|
-| `ece.ipynb` | expected calibration error and calibration curves |
-| `uncertainty_ranking.ipynb` | risk–coverage, uncertainty ranking metrics, calibration and risk–coverage per predicted pose-quality class |
-| `rmsd_distribution.ipynb` | RMSD distributions, effect of the RMSD cutoff, sigmoid parameters |
-| `dataset_overlap.ipynb` | overlap of ligands, kinases and kinase–ligand pairs between the activity and pose datasets |
-| `gradient_balance.py` | gradient contributions of the activity and pose losses |
+Notebooks that compute the evaluations of the paper from the test predictions (calibration, uncertainty ranking, ablations, dataset overlap) will be added to `analysis_publication/`. `analysis_publication/plot_style.py` holds the plot style of the paper figures.
