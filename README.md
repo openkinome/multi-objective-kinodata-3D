@@ -4,11 +4,11 @@ Code and data-processing utilities for **No Pose Left Behind: Integrating Activi
 
 This repository contains the implementation of `mOKDDD`, a multi-objective E(3)-invariant graph neural network for kinase–ligand binding affinity prediction. The model is designed to learn from experimentally measured activity data paired with *in silico*-generated kinase–ligand complex structures of varying pose quality.
 
-Unlike structure-based models that rely only on poses below a fixed RMSD cutoff, `mOKDDD` explicitly models structural reliability. For each kinase–ligand complex, the model jointly predicts:
+Unlike structure-based models that rely only on poses below a fixed RMSD cutoff, `mOKDDD` explicitly models pose reliability. For each kinase–ligand complex, the model jointly predicts:
 
 - binding affinity, expressed as pIC50;
 - activity uncertainty;
-- pose quality, expressed as a structural reliability score.
+- pose quality, expressed as a pose-reliability score q between 0 and 1: a bounded, monotonic transformation of the RMSD to the crystal pose, not a calibrated probability of pose correctness.
 
 The predicted pose quality is used to modulate the contribution of each structure to the activity loss, allowing the model to learn from heterogeneous structural data while giving greater importance to reliable complexes.
 
@@ -34,7 +34,7 @@ Both activity and pose-quality mini-batches are processed by the same E(3)-invar
 **(d) Multi-output readout and joint training.**  
 A multi-output readout predicts binding affinity, activity uncertainty, and pose quality. These outputs are optimized jointly using a multi-objective loss that combines the activity and pose-quality objectives.
 
-The activity objective learns binding affinity and uncertainty from kinase–ligand complexes with experimental activity labels, while the pose-quality objective learns to estimate the structural reliability of generated ligand poses. The predicted pose quality is then used to modulate the activity loss, allowing the model to learn from heterogeneous structural data while giving greater importance to reliable complexes.
+The activity objective learns binding affinity and uncertainty from kinase–ligand complexes with experimental activity labels, while the pose-quality objective learns to predict the pose-reliability score of generated ligand poses. The predicted pose quality is then used to modulate the activity loss, allowing the model to learn from heterogeneous structural data while giving greater importance to reliable complexes.
 
 ## Model outputs
 
@@ -43,7 +43,7 @@ For each kinase–ligand complex `x`, the model predicts:
 ```text
 mu(x)         predicted activity
 sigma^2(x)   predicted activity variance
-q_pose(x)    predicted pose quality
+q_pose(x)    predicted pose-reliability score
 ```
 
 ## Installation
@@ -82,7 +82,7 @@ All experiments use 5-fold cross-validation; each fold is one training run. `kin
 | Setting | Value |
 |---|---|
 | RMSD filter (both datasets) | ≤ 10 Å (`--rmsd_max 10`) |
-| Pose-quality target | q = 1 / (1 + exp(0.9 (RMSD − 4.5))) |
+| Pose-reliability score (target) | q = 1 / (1 + exp(0.9 (RMSD − 4.5))) |
 | Pose loss | BCE with class weights 10 (q ≤ 0.2) and 7 (q ≥ 0.8), 1 otherwise |
 | Activity loss | Gaussian NLL weighted by ε + (1 − ε) q, ε = 0.10 (`--activity_eps 0.10`) |
 | Total loss | L_activity + L_pose |
