@@ -1,0 +1,6 @@
+fold,activity training complexes,pose training poses,activity batches per epoch,pose batches per epoch,steps with both losses (%),optimizer steps per epoch,optimizer steps with the pose loss
+0,96032,46624,3001,1457,48.6,751,365
+1,95040,47616,2970,1488,50.1,743,372
+2,95072,47584,2971,1487,50.1,743,372
+3,95584,47040,2987,1470,49.2,747,368
+4,95872,46752,2996,1461,48.8,749,366
