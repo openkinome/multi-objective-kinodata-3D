@@ -8,7 +8,7 @@ Unlike structure-based models that rely only on poses below a fixed RMSD cutoff,
 
 - binding affinity, expressed as pIC50;
 - activity uncertainty;
-- pose quality, expressed as a pose-reliability score q between 0 and 1: a bounded, monotonic transformation of the RMSD to the crystal pose, not a calibrated probability of pose correctness.
+- pose quality, expressed as a pose-reliability score q between 0 and 1: a bounded, monotonic transformation of the RMSD to the crystal pose.
 
 The predicted pose quality is used to modulate the contribution of each structure to the activity loss, allowing the model to learn from heterogeneous structural data while giving greater importance to reliable complexes.
 
