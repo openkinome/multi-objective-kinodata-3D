@@ -65,7 +65,9 @@ class Clustering(Generic[T]):
 class AffinityPropagation(Clustering):
     def __init__(self) -> None:
         super().__init__()
-        self.model = cluster.AffinityPropagation(affinity="precomputed")
+        # fixed random_state: sklearn adds seeded noise to the similarities to break ties; without a seed the clusters
+        # (and so the pocket split) depend on the global numpy random state
+        self.model = cluster.AffinityPropagation(affinity="precomputed", random_state=0)
 
     def solve(self):
         self.model.fit(self.similarities)

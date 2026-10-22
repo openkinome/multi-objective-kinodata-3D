@@ -364,18 +364,59 @@ class DualSplit:
     activity: Split
     pose: Split
 
+def _same_pocket(a: str, b: str, min_overlap: int = 70) -> bool:
+    """Same kinase pocket: identical residues at every position resolved in both KLIFS sequences (gaps '_'/'-' ignored)."""
+    if not (isinstance(a, str) and isinstance(b, str)) or len(a) != len(b):
+        return False
+    both = [(x, y) for x, y in zip(a, b) if x not in "_-" and y not in "_-"]
+    return len(both) >= min_overlap and all(x == y for x, y in both)
+
+
+def _merge_identical_pockets(sequences: Iterable[str]) -> Dict[str, str]:
+    """Map every pocket sequence to one representative of its group of identical pockets (gaps ignored), so that
+    sequence variants of the same kinase that differ only in unresolved residues end up in the same cluster.
+    Representative: the most resolved sequence of the group (fewest gaps), ties broken alphabetically."""
+    seqs = sorted(set(sequences), key=lambda s: (sum(c in "_-" for c in str(s)), str(s)))
+    parent = {s: s for s in seqs}
+    order = {s: i for i, s in enumerate(seqs)}
+
+    def find(s):
+        while parent[s] != s:
+            parent[s] = parent[parent[s]]
+            s = parent[s]
+        return s
+
+    by_len: Dict[int, List[str]] = {}
+    for s in seqs:
+        by_len.setdefault(len(str(s)), []).append(s)
+    for group in by_len.values():
+        for i, a in enumerate(group):
+            for b in group[i + 1:]:
+                if _same_pocket(a, b):
+                    ra, rb = find(a), find(b)
+                    if ra != rb:  # keep the earlier (more resolved) sequence as representative
+                        first, second = sorted([ra, rb], key=order.get)
+                        parent[second] = first
+    return {s: find(s) for s in seqs}
+
+
 def _cluster_pockets_union(activity_ds,
                            pose_ds,
                            clustering: AffinityPropagation,
                            sim_measure: BLOSUMSubstitutionSimilarity) -> Tuple[np.ndarray, np.ndarray]:
     act_seq = np.asarray(activity_ds.data.pocket_sequence)
     pose_seq = np.asarray(pose_ds.data.pocket_sequence)
+    all_seq = np.concatenate([act_seq, pose_seq], axis=0)
+    # identical pockets (gaps ignored) are merged before clustering, so the same kinase cannot be split across
+    # train and val/test; the BLOSUM similarity clustering then runs on one representative per kinase pocket
+    rep = _merge_identical_pockets(all_seq)
+    print(f"pocket clustering: {len(rep)} pocket sequences, {len(set(rep.values()))} after merging identical pockets")
     union_df = pd.DataFrame({
-        "index": np.arange(len(act_seq) + len(pose_seq)),
-        "pocket_sequence": np.concatenate([act_seq, pose_seq], axis=0)
+        "index": np.arange(len(all_seq)),
+        "pocket_representative": [rep[s] for s in all_seq],
     })
     df_labels = clustering(
-        union_df, "pocket_sequence", fn_similarity=sim_measure()
+        union_df, "pocket_representative", fn_similarity=sim_measure()
     ).sort_values(by="index", ascending=True)
     labels = np.asarray(df_labels[clustering.cluster_key].values)
     act_labels = labels[:len(act_seq)]
