@@ -128,4 +128,18 @@ The RMSD restrictions apply to the training and validation sets only; the test s
 
 ### Analysis
 
-Notebooks that compute the evaluations of the paper from the test predictions (calibration, uncertainty ranking, ablations, dataset overlap) will be added to `analysis_publication/`. `analysis_publication/plot_style.py` holds the plot style of the paper figures.
+`analysis_publication/` contains notebooks for most of the analyses in the paper; not all analyses are included yet. Each notebook reads the small data files it needs from `analysis_publication/data/` (test predictions, per-fold values, RMSD tables), so it runs from this repository without the training data or the trained models. Figures are written to `analysis_publication/output/`.
+
+| Notebook | Content |
+|---|---|
+| `overall_performance.ipynb` | Test MAE and Pearson correlation per fold of the activity and pose-reliability predictions, random and scaffold splits (Fig. 5) |
+| `pose_reliability_validation.ipynb` | Predicted pose-reliability score on cross-docked test poses with a crystal reference: confusion matrices (Fig. 6), predicted uncertainty vs true RMSD |
+| `rmsd_distribution.ipynb` | RMSD distributions of both datasets, effect of the RMSD cutoff, pose-reliability score as a function of RMSD |
+| `dataset_overlap.ipynb` | Shared ligands, scaffolds, kinases and kinase–ligand pairs between the activity and the pose dataset; train/test assignment across tasks |
+| `gradient_balance.ipynb` (+ `gradient_balance.py`) | Balance between the activity and pose-quality objectives: number of updates, gradient norms and alignment on the shared network |
+| `ablation_pose_range.ipynb` | Ablations removing one part of the pose-aware training at a time (ε = 1, pose data restricted by RMSD, good poses only) |
+| `ablation_good_poses.ipynb` | Training on good poses only vs keeping and down-weighting low-quality poses |
+| `similarity_to_training.ipynb` | Accuracy and uncertainty calibration as a function of the Tanimoto similarity to the training set |
+| `cold_target.ipynb` | Cold-target split: performance on kinases not seen in training |
+
+`analysis_publication/plot_style.py` holds the plot style of the paper figures.

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 def get_version() -> str:
-    return "1.0.0"
+    return "2.0.0"
 
 
 print(find_packages())
